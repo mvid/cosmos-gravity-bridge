@@ -27,7 +27,7 @@
     "axios": "0.21.1"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^3.0.1",
+    "@openzeppelin/contracts": "^3.3.0",
     "@types/command-line-args": "^5.0.0",
     "buidler-typechain": "0.0.5",
     "command-line-args": "^5.1.1",
