@@ -82,7 +82,7 @@ async function runTest(opts: {
     txFees[i] = 1;
     txAmounts[i] = 5;
     txLogicContractAddresses[i] = logicContract.address;
-    txPayloads[i] = logicContract.interface.functions.transferTokens.encode([await signers[20].getAddress(), 2, 2])
+    txPayloads[i] = logicContract.interface.encodeFunctionData("transferTokens", [await signers[20].getAddress(), 2, 2])
   }
 
   if (opts.malformedTxBatch) {
@@ -190,23 +190,23 @@ async function runTest(opts: {
   );
 
   expect(
-      (await testERC20.functions.balanceOf(await signers[20].getAddress())).toNumber()
+      (await testERC20.functions.balanceOf(await signers[20].getAddress()))[0].toNumber()
   ).to.equal(40);
 
   expect(
-    (await testERC20.functions.balanceOf(peggy.address)).toNumber()
+    (await testERC20.functions.balanceOf(peggy.address))[0].toNumber()
   ).to.equal(940);
 
   expect(
-      (await testERC20.functions.balanceOf(logicContract.address)).toNumber()
+      (await testERC20.functions.balanceOf(logicContract.address))[0].toNumber()
   ).to.equal(10);
   
   expect(
-    (await testERC20.functions.balanceOf(await signers[0].getAddress())).toNumber()
+    (await testERC20.functions.balanceOf(await signers[0].getAddress()))[0].toNumber()
   ).to.equal(9010);
 }
 
-describe("submitBatch tests", function () {
+describe.only("submitBatch tests", function () {
   it("throws on malformed current valset", async function () {
     await expect(runTest({ malformedCurrentValset: true })).to.be.revertedWith(
       "Malformed current validator set"
