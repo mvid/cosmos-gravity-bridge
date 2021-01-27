@@ -1,5 +1,5 @@
 import chai from "chai";
-import { ethers } from "@nomiclabs/buidler";
+import { ethers } from "hardhat";
 import { solidity } from "ethereum-waffle";
 
 import { deployContracts } from "../test-utils";
@@ -167,7 +167,7 @@ describe("Peggy happy path with combination method", function () {
     expect(
       await (
         await testERC20.functions.balanceOf(await signers[6].getAddress())
-      ).toNumber()
+      )[0].toNumber()
     ).to.equal(1);
   });
 });
