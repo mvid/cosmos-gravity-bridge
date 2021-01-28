@@ -1,5 +1,5 @@
 import chai from "chai";
-import { ethers } from "hardhat";
+import { ethers} from "hardhat";
 import { solidity } from "ethereum-waffle";
 
 import { deployContracts } from "../test-utils";
@@ -23,6 +23,8 @@ async function runTest(opts: {
   zeroedValidatorSig?: boolean;
   notEnoughPower?: boolean;
 }) {
+
+
   const signers = await ethers.getSigners();
   const peggyId = ethers.utils.formatBytes32String("foo");
 

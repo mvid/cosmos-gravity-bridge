@@ -1,6 +1,16 @@
 import "@nomiclabs/hardhat-waffle";
 import "hardhat-gas-reporter";
 import "hardhat-typechain";
+import { task } from "hardhat/config";
+
+
+task("accounts", "Prints the list of accounts", async (args, hre) => {
+  const accounts = await hre.ethers.getSigners();
+
+  for (const account of accounts) {
+    console.log(account.address);
+  }
+});
 
 // // This is a sample Buidler task. To learn how to create your own go to
 // // https://buidler.dev/guides/create-task.html
@@ -815,5 +825,8 @@ module.exports = {
     outDir: "typechain",
     target: "ethers-v5",
     runOnCompile: true
+  },
+  gasReporter: {
+    enabled: true
   }
 };

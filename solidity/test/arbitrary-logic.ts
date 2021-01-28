@@ -1,5 +1,5 @@
 import chai from "chai";
-import { ethers } from "hardhat";
+import { ethers, network} from "hardhat";
 import { solidity } from "ethereum-waffle";
 import { TestLogicContract } from "../typechain/TestLogicContract";
 
@@ -30,7 +30,10 @@ async function runTest(opts: {
   malformedCurrentValset?: boolean;
 }) {
 
-
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: ["0x5bd87adb554702e535aa74431dda68eaf9a8f548"]}
+    )
 
   // Prep and deploy contract
   // ========================
