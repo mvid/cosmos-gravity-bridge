@@ -4,6 +4,8 @@ import "hardhat-typechain";
 import { task } from "hardhat/config";
 
 
+const ALCHEMY_ID = process.env.ALCHEMY_ID != null? process.env.ALCHEMY_ID : console.log("You must provide a ALCHEMY API key to fork mainnet")
+
 task("accounts", "Prints the list of accounts", async (args, hre) => {
   const accounts = await hre.ethers.getSigners();
 
@@ -37,6 +39,9 @@ module.exports = {
     }  },
   networks: {
     hardhat: {
+      forking:{
+        url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_ID}`,
+      },
       accounts: [
         {
           privateKey:

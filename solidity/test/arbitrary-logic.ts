@@ -35,6 +35,9 @@ async function runTest(opts: {
       params: ["0x5bd87adb554702e535aa74431dda68eaf9a8f548"]}
     )
 
+  let lp_signer = await ethers.provider.getSigner("0x5bd87adb554702e535aa74431dda68eaf9a8f548")
+
+
   // Prep and deploy contract
   // ========================
   const signers = await ethers.getSigners();
@@ -52,6 +55,12 @@ async function runTest(opts: {
   const TestLogicContract = await ethers.getContractFactory("TestLogicContract");
   const logicContract = (await TestLogicContract.deploy(testERC20.address)) as TestLogicContract;
   await logicContract.transferOwnership(peggy.address);
+
+
+  let usdc_eth_lp = await ethers.getContractAt('IERC20', '0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc', lp_signer)
+   
+  await usdc_eth_lp.approve(peggy.address, 1000)
+
 
 
 
