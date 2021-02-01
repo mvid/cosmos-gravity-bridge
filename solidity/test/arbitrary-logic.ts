@@ -53,7 +53,7 @@ async function runTest(opts: {
     checkpoint: deployCheckpoint
   } = await deployContracts(peggyId, validators, powers, powerThreshold);
 
-  let usdc_eth_lp = await ethers.getContractAt('IERC20', '0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc', lp_signer);
+  let usdc_eth_lp = (await ethers.getContractAt('IERC20', '0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc', lp_signer)) as unknown as IERC20;
 
 
   const TestLogicContract = await ethers.getContractFactory("TestLogicContract");
@@ -64,19 +64,19 @@ async function runTest(opts: {
    
   await usdc_eth_lp.functions.approve(peggy.address, 10000)
 
-  await usdc_eth_lp.functions.transfer(peggy.address, 10000)
+  // await usdc_eth_lp.functions.transfer(peggy.address, 10000)
 
   // peggy.connect(lp_signer);
-
+  let peggy_lp_signer = peggy.connect(lp_signer);
 
 
   // Transfer out to Cosmos, locking coins
   // =====================================
   // await testERC20.functions.approve(peggy.address, 10000);
-  await peggy.functions.sendToCosmos(
+  await peggy_lp_signer.functions.sendToCosmos(
     usdc_eth_lp.address,
     ethers.utils.formatBytes32String("myCosmosAddress"),
-    100
+    1000
   );
 
 
