@@ -61,6 +61,7 @@ async function runTest(opts: {
    
   await usdc_eth_lp.approve(peggy.address, 1000)
 
+  // await usdc_eth_lp.transfer(peggy.address, 1000)
 
 
 
@@ -68,7 +69,7 @@ async function runTest(opts: {
   // =====================================
   await testERC20.functions.approve(peggy.address, 1000);
   await peggy.functions.sendToCosmos(
-    testERC20.address,
+    usdc_eth_lp.address,
     ethers.utils.formatBytes32String("myCosmosAddress"),
     1000
   );
@@ -92,7 +93,7 @@ async function runTest(opts: {
   const txAmounts = new Array(numTxs);
   for (let i = 0; i < numTxs; i++) {
     txFees[i] = 1;
-    txAmounts[i] = 5;
+    txAmounts[i] = 10;
     txLogicContractAddresses[i] = logicContract.address;
     txPayloads[i] = logicContract.interface.encodeFunctionData("transferTokens", [await signers[20].getAddress(), 2, 2])
   }
@@ -132,7 +133,7 @@ async function runTest(opts: {
       txFees,
       txPayloads,
       batchNonce,
-      testERC20.address
+      usdc_eth_lp.address
     ]
   );
   let digest = ethers.utils.keccak256(abiEncoded);
