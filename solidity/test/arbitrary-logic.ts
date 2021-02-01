@@ -2,6 +2,7 @@ import chai from "chai";
 import { ethers, network} from "hardhat";
 import { solidity } from "ethereum-waffle";
 import { TestLogicContract } from "../typechain/TestLogicContract";
+import { IERC20} from "../typechain/IERC20"
 
 import { deployContracts } from "../test-utils";
 import {
@@ -32,10 +33,10 @@ async function runTest(opts: {
 
     await network.provider.request({
       method: "hardhat_impersonateAccount",
-      params: ["0x5bd87adb554702e535aa74431dda68eaf9a8f548"]}
+      params: ["0x0c731fb0d03211dd32a456370ad2ec3ffad46520"]}
     )
 
-  let lp_signer = await ethers.provider.getSigner("0x5bd87adb554702e535aa74431dda68eaf9a8f548")
+  let lp_signer = await ethers.provider.getSigner("0x0c731fb0d03211dd32a456370ad2ec3ffad46520")
 
 
   // Prep and deploy contract
@@ -52,26 +53,30 @@ async function runTest(opts: {
     checkpoint: deployCheckpoint
   } = await deployContracts(peggyId, validators, powers, powerThreshold);
 
+  let usdc_eth_lp = await ethers.getContractAt('IERC20', '0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc', lp_signer);
+
+
   const TestLogicContract = await ethers.getContractFactory("TestLogicContract");
-  const logicContract = (await TestLogicContract.deploy(testERC20.address)) as TestLogicContract;
+  const logicContract = (await TestLogicContract.deploy(usdc_eth_lp.address)) as TestLogicContract;
   await logicContract.transferOwnership(peggy.address);
 
-
-  let usdc_eth_lp = await ethers.getContractAt('IERC20', '0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc', lp_signer)
+  console.log((await(usdc_eth_lp.balanceOf(lp_signer._address))).toString())
    
-  await usdc_eth_lp.approve(peggy.address, 1000)
+  await usdc_eth_lp.functions.approve(peggy.address, 10000)
 
-  // await usdc_eth_lp.transfer(peggy.address, 1000)
+  await usdc_eth_lp.functions.transfer(peggy.address, 10000)
+
+  // peggy.connect(lp_signer);
 
 
 
   // Transfer out to Cosmos, locking coins
   // =====================================
-  await testERC20.functions.approve(peggy.address, 1000);
+  // await testERC20.functions.approve(peggy.address, 10000);
   await peggy.functions.sendToCosmos(
     usdc_eth_lp.address,
     ethers.utils.formatBytes32String("myCosmosAddress"),
-    1000
+    100
   );
 
 
