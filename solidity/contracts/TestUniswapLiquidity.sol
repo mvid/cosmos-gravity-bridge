@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
 
-contract TestLogicContract is Ownable {
+contract TestUniswapLiquidity is Ownable {
         address router;
 
         constructor(address _uni_router) public {
