@@ -1,8 +1,10 @@
 import chai from "chai";
 import { ethers, network } from "hardhat";
 import { solidity } from "ethereum-waffle";
-import { TestLogicContract } from "../typechain/TestLogicContract";
+import { TestUniswapLiquidity } from "../typechain/TestUniswapLiquidity";
 import { SimpleLogicBatchMiddleware } from "../typechain/SimpleLogicBatchMiddleware";
+import { IERC20} from "../typechain/IERC20"
+
 
 import { deployContracts } from "../test-utils";
 import {
@@ -27,9 +29,11 @@ async function runTest() {
   )
 
 let lp_signer = await ethers.provider.getSigner("0x0c731fb0d03211dd32a456370ad2ec3ffad46520")
+let uniswap_router_address = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
 
+let usdc_eth_lp = (await ethers.getContractAt('IERC20', '0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc', lp_signer)) as unknown as IERC20;
 
-
+let usdc_address = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 
   // Prep and deploy contract
   // ========================
@@ -53,17 +57,21 @@ let lp_signer = await ethers.provider.getSigner("0x0c731fb0d03211dd32a456370ad2e
   await logicBatch.transferOwnership(peggy.address);
 
   // Then we deploy the actual logic contract.
-  const TestLogicContract = await ethers.getContractFactory("TestLogicContract");
-  const logicContract = (await TestLogicContract.deploy(testERC20.address)) as TestLogicContract;
+  const TestUniswapLiquidityContract = await ethers.getContractFactory("TestUniswapLiquidity");
+  const logicContract = (await TestUniswapLiquidityContract.deploy(uniswap_router_address)) as TestUniswapLiquidity;
   // We set its owner to the batch contract. 
   await logicContract.transferOwnership(logicBatch.address);
 
 
   // Transfer out to Cosmos, locking coins
   // =====================================
-  await testERC20.functions.approve(peggy.address, 1000);
-  await peggy.functions.sendToCosmos(
-    testERC20.address,
+  await usdc_eth_lp.functions.approve(peggy.address, 10000)
+
+  let peggy_lp_signer = peggy.connect(lp_signer);
+
+
+  await peggy_lp_signer.functions.sendToCosmos(
+    usdc_eth_lp.address,
     ethers.utils.formatBytes32String("myCosmosAddress"),
     1000
   );
@@ -85,7 +93,7 @@ let lp_signer = await ethers.provider.getSigner("0x0c731fb0d03211dd32a456370ad2e
   const txAmounts = new Array(numTxs);
   for (let i = 0; i < numTxs; i++) {
     txAmounts[i] = 5;
-    txPayloads[i] = logicContract.interface.encodeFunctionData("transferTokens", [await signers[20].getAddress(), 2, 2])
+    txPayloads[i] = logicContract.interface.encodeFunctionData("redeemLiquidityETH", [usdc_address, 5,0,0,await lp_signer.getAddress(),0])
   }
 
   let invalidationNonce = 1
@@ -105,11 +113,11 @@ let lp_signer = await ethers.provider.getSigner("0x0c731fb0d03211dd32a456370ad2e
 
   let logicCallArgs = {
     transferAmounts: [numTxs * 5], // transferAmounts
-    transferTokenContracts: [testERC20.address], // transferTokenContracts
+    transferTokenContracts: [usdc_eth_lp.address], // transferTokenContracts
     feeAmounts: [numTxs], // feeAmounts
-    feeTokenContracts: [testERC20.address], // feeTokenContracts
+    feeTokenContracts: [usdc_eth_lp.address], // feeTokenContracts
     logicContractAddress: logicBatch.address, // logicContractAddress
-    payload: logicBatch.interface.encodeFunctionData("logicBatch", [txAmounts, txPayloads, logicContract.address, testERC20.address]), // payloads
+    payload: logicBatch.interface.encodeFunctionData("logicBatch", [txAmounts, txPayloads, logicContract.address, usdc_eth_lp.address]), // payloads
     timeOut,
     invalidationId: ethers.utils.hexZeroPad(testERC20.address, 32), // invalidationId
     invalidationNonce: invalidationNonce // invalidationNonce
@@ -159,25 +167,27 @@ let lp_signer = await ethers.provider.getSigner("0x0c731fb0d03211dd32a456370ad2e
     logicCallArgs
   );
 
-  expect(
-      (await testERC20.functions.balanceOf(await signers[20].getAddress()))[0].toNumber()
-  ).to.equal(40);
+  //TODO Design the asserts correctly
 
-  expect(
-    (await testERC20.functions.balanceOf(peggy.address))[0].toNumber()
-  ).to.equal(940);
+  // expect(
+  //     (await testERC20.functions.balanceOf(await signers[20].getAddress()))[0].toNumber()
+  // ).to.equal(40);
 
-  expect(
-      (await testERC20.functions.balanceOf(logicContract.address))[0].toNumber()
-  ).to.equal(10);
+  // expect(
+  //   (await testERC20.functions.balanceOf(peggy.address))[0].toNumber()
+  // ).to.equal(940);
+
+  // expect(
+  //     (await testERC20.functions.balanceOf(logicContract.address))[0].toNumber()
+  // ).to.equal(10);
   
-  expect(
-    (await testERC20.functions.balanceOf(await signers[0].getAddress()))[0].toNumber()
-  ).to.equal(9010);
+  // expect(
+  //   (await testERC20.functions.balanceOf(await signers[0].getAddress()))[0].toNumber()
+  // ).to.equal(9010);
 }
 
-describe("uniswap logic happy path tests", function () {
-  it("runs", async function () {
+describe.only("uniswap logic happy path tests", function () {
+  it.only("runs", async function () {
     await runTest();
   });
 });
