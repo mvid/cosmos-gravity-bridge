@@ -1,5 +1,5 @@
 import chai from "chai";
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import { solidity } from "ethereum-waffle";
 import { TestLogicContract } from "../typechain/TestLogicContract";
 import { SimpleLogicBatchMiddleware } from "../typechain/SimpleLogicBatchMiddleware";
@@ -18,6 +18,16 @@ const { expect } = chai;
 
 
 async function runTest() {
+
+  //Take over the larges
+
+  await network.provider.request({
+    method: "hardhat_impersonateAccount",
+    params: ["0x0c731fb0d03211dd32a456370ad2ec3ffad46520"]}
+  )
+
+let lp_signer = await ethers.provider.getSigner("0x0c731fb0d03211dd32a456370ad2ec3ffad46520")
+
 
 
 
