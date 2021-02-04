@@ -21,7 +21,8 @@ const { expect } = chai;
 
 async function runTest() {
 
-  //Take over the larges
+
+  //Take over the largest liquidity provider for USDC
 
   await network.provider.request({
     method: "hardhat_impersonateAccount",
@@ -186,7 +187,7 @@ let usdc_address = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
   // ).to.equal(9010);
 }
 
-describe.only("uniswap logic happy path tests", function () {
+describe("uniswap logic happy path tests", function () {
   it.only("runs", async function () {
     await runTest();
   });
