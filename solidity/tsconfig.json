@@ -19,8 +19,9 @@
     "scripts/**/*",
     "tasks/**/*",
     "test/**/*",
+    "tests_mainnet_fork/**/*",
     "typechain/**/*",
     "types/**/*",
     "hardhat.config.ts"
-  ]
+, "tests_mainnet_fork/uniswap-logic.ts"  ]
 }

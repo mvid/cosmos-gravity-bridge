@@ -6,6 +6,8 @@
   "scripts": {
     "evm": "npx hardhat node",
     "test": "npx hardhat test --network localhost",
+    "evm_fork":"npx hardhat node --fork https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_ID} --fork-block-number 11780000",
+    "test_fork": "npx hardhat test --network localhost ./tests_mainnet_fork/*.ts",
     "typechain": "npx hardhat typechain"
   },
   "author": "",
