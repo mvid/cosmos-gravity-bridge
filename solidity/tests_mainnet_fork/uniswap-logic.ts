@@ -32,8 +32,10 @@ async function runTest() {
 let lp_signer = await ethers.provider.getSigner("0x0c731fb0d03211dd32a456370ad2ec3ffad46520")
 let uniswap_router_address = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
 
+// Get the usdc pool contracts as an ERC
 let usdc_eth_lp = (await ethers.getContractAt('IERC20', '0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc', lp_signer)) as unknown as IERC20;
 
+// USDC ethereum address
 let usdc_address = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 
   // Prep and deploy contract
@@ -68,6 +70,7 @@ let usdc_address = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
   // =====================================
   await usdc_eth_lp.functions.approve(peggy.address, 10000)
 
+  // Swap the signer of Peggy to the whale liqudity provider.
   let peggy_lp_signer = peggy.connect(lp_signer);
 
 
