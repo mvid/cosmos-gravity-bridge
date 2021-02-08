@@ -3,7 +3,9 @@ import { ethers, network } from "hardhat";
 import { solidity } from "ethereum-waffle";
 import { TestUniswapLiquidity } from "../typechain/TestUniswapLiquidity";
 import { SimpleLogicBatchMiddleware } from "../typechain/SimpleLogicBatchMiddleware";
-import { IERC20 } from "../typechain/IERC20";
+import { IUniswapV2Pair__factory } from "../typechain/factories/IUniswapV2Pair__factory";
+
+import {IUniswapV2Router02__factory} from "../typechain/factories/IUniswapV2Router02__factory";
 
 import { deployContracts } from "../test-utils";
 import {
@@ -28,17 +30,38 @@ async function runTest() {
   let lp_signer = await ethers.provider.getSigner(
     "0x0c731fb0d03211dd32a456370ad2ec3ffad46520"
   );
+
+  let starting_lp_eth_balance = await ethers.provider.getBalance(await lp_signer.getAddress());
+
+  console.log(`Starting LP eth balance ${starting_lp_eth_balance}`);
+
   let uniswap_router_address = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
 
-  // Get the usdc pool contracts as an ERC
-  let usdc_eth_lp = ((await ethers.getContractAt(
-    "IERC20",
-    "0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc",
-    lp_signer
-  )) as unknown) as IERC20;
+  let uniswap_router_contact = await IUniswapV2Pair__factory.connect(uniswap_router_address,lp_signer);
+
+
+  let usdc_eth_lp =await IUniswapV2Pair__factory.connect("0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc",lp_signer)
+
+
+
+  let total_lp_supply = (await usdc_eth_lp.functions.totalSupply())[0]
+
+  let lp_provider_balance = await usdc_eth_lp.functions.balanceOf(await lp_signer.getAddress());
+
+  let [reserve0,reserve1,_] = await usdc_eth_lp.functions.getReserves()
+
+  console.log(`TotalSupply:${total_lp_supply} Whale Balance:${lp_provider_balance} Reserve0:${reserve0} Reserve1:${reserve1}`);
+
+
+  let eth_per_lp_unit = reserve1.div(total_lp_supply); 
+
+  console.log(`Eth per lp token:${eth_per_lp_unit}`)
 
   // USDC ethereum address
   let usdc_address = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+
+  let wrapped_eth_address ="0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
+
 
   // Prep and deploy contract
   // ========================
@@ -188,6 +211,21 @@ async function runTest() {
   );
 
   //TODO Design the asserts correctly
+
+  let ending_lp_eth_balance = await ethers.provider.getBalance(await lp_signer.getAddress());
+
+  console.log(`Ending LP eth balance ${ending_lp_eth_balance}`);
+
+  let balance_difference = ending_lp_eth_balance.sub(starting_lp_eth_balance);
+
+  console.log(`Ending LP eth balance difference ${balance_difference}`);
+
+  let exepect_gains = eth_per_lp_unit.mul(50);
+
+  console.log(`Expected LP eth balance difference ${exepect_gains}`);
+
+
+  // expect(await )
 
   // expect(
   //     (await testERC20.functions.balanceOf(await signers[20].getAddress()))[0].toNumber()
