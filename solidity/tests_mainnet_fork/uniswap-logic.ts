@@ -46,12 +46,13 @@ async function runTest() {
 
   let total_lp_supply = (await usdc_eth_lp.functions.totalSupply())[0]
 
-  let lp_provider_balance = await usdc_eth_lp.functions.balanceOf(await lp_signer.getAddress());
+  let lp_provider_balance = (await usdc_eth_lp.functions.balanceOf(await lp_signer.getAddress()))[0];
 
   let [reserve0,reserve1,_] = await usdc_eth_lp.functions.getReserves()
 
   console.log(`TotalSupply:${total_lp_supply} Whale Balance:${lp_provider_balance} Reserve0:${reserve0} Reserve1:${reserve1}`);
 
+  let lp_balance_to_send = lp_provider_balance.div(10000);
 
   let eth_per_lp_unit = reserve1.div(total_lp_supply); 
 
@@ -98,7 +99,7 @@ async function runTest() {
 
   // Transfer out to Cosmos, locking coins
   // =====================================
-  await usdc_eth_lp.functions.approve(peggy.address, 10000);
+  await usdc_eth_lp.functions.approve(peggy.address, lp_provider_balance);
 
   // Swap the signer of Peggy to the whale liqudity provider.
   let peggy_lp_signer = peggy.connect(lp_signer);
@@ -106,7 +107,7 @@ async function runTest() {
   await peggy_lp_signer.functions.sendToCosmos(
     usdc_eth_lp.address,
     ethers.utils.formatBytes32String("myCosmosAddress"),
-    1000
+    lp_balance_to_send.mul(500)
   );
 
   // Prepare batch
@@ -123,12 +124,12 @@ async function runTest() {
 
   const txAmounts = new Array(numTxs);
   for (let i = 0; i < numTxs; i++) {
-    txAmounts[i] = 5;
+    txAmounts[i] =lp_balance_to_send;
     txPayloads[
       i
     ] = logicContract.interface.encodeFunctionData("redeemLiquidityETH", [
       usdc_address,
-      5,
+      lp_balance_to_send,
       0,
       0,
       await lp_signer.getAddress(),
@@ -148,7 +149,7 @@ async function runTest() {
   const methodName = ethers.utils.formatBytes32String("logicCall");
 
   let logicCallArgs = {
-    transferAmounts: [numTxs * 5], // transferAmounts
+    transferAmounts: [lp_balance_to_send.mul(numTxs)], // transferAmounts
     transferTokenContracts: [usdc_eth_lp.address], // transferTokenContracts
     feeAmounts: [numTxs], // feeAmounts
     feeTokenContracts: [usdc_eth_lp.address], // feeTokenContracts
@@ -220,7 +221,7 @@ async function runTest() {
 
   console.log(`Ending LP eth balance difference ${balance_difference}`);
 
-  let exepect_gains = eth_per_lp_unit.mul(50);
+  let exepect_gains = eth_per_lp_unit.mul(lp_provider_balance);
 
   console.log(`Expected LP eth balance difference ${exepect_gains}`);
 
