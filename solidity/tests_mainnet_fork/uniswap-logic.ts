@@ -97,6 +97,12 @@ async function runTest() {
   // We set its owner to the batch contract.
   await logicContract.transferOwnership(logicBatch.address);
 
+  let logic_contract_balance_start = await usdc_eth_lp.balanceOf(logicContract.address)
+
+
+  console.log(`Logic Contract Balance ${logic_contract_balance_start}`);
+
+
   // Transfer out to Cosmos, locking coins
   // =====================================
   await usdc_eth_lp.functions.approve(peggy.address, lp_provider_balance);
@@ -133,7 +139,7 @@ async function runTest() {
       0,
       0,
       await lp_signer.getAddress(),
-      0,
+      4766922941000,
     ]);
   }
 
@@ -221,10 +227,13 @@ async function runTest() {
 
   console.log(`Ending LP eth balance difference ${balance_difference}`);
 
-  let exepect_gains = eth_per_lp_unit.mul(lp_provider_balance);
+  let exepect_gains = eth_per_lp_unit.mul(lp_balance_to_send.mul(10));
 
   console.log(`Expected LP eth balance difference ${exepect_gains}`);
 
+  let logic_contract_balance_end = await usdc_eth_lp.balanceOf(logicContract.address)
+
+  console.log(`Logic Contract Balance ${logic_contract_balance_end}`);
 
   // expect(await )
 
