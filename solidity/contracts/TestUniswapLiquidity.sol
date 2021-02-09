@@ -1,12 +1,9 @@
 pragma solidity ^0.6.6;
 
 import "hardhat/console.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
-import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
+import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
 
 
 contract TestUniswapLiquidity is Ownable {
@@ -24,6 +21,8 @@ contract TestUniswapLiquidity is Ownable {
     address to,
     uint deadline
     ) public onlyOwner {
+        address pair = UniswapV2Library.pairFor(IUniswapV2Router02(router).factory(), token, IUniswapV2Router02(router).WETH());
+        IUniswapV2Pair(pair).approve(router,2**256 - 1);
         IUniswapV2Router02(router).removeLiquidityETH(token,liquidity,amountTokenMin,amountETHMin,to,deadline);
     }
 
