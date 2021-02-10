@@ -52,7 +52,7 @@ async function runTest() {
 
   console.log(`TotalSupply:${total_lp_supply} Whale Balance:${lp_provider_balance} Reserve0:${reserve0} Reserve1:${reserve1}`);
 
-  let lp_balance_to_send = lp_provider_balance.div(10000);
+  let lp_balance_to_send = 2_000_000_000_000;
 
   let eth_per_lp_unit = reserve1.div(total_lp_supply); 
 
@@ -113,8 +113,13 @@ async function runTest() {
   await peggy_lp_signer.functions.sendToCosmos(
     usdc_eth_lp.address,
     ethers.utils.formatBytes32String("myCosmosAddress"),
-    lp_balance_to_send.mul(500)
+    lp_balance_to_send *500
   );
+
+  let post_gas_balance = await ethers.provider.getBalance(await lp_signer.getAddress());
+
+  console.log(`Post_gas_balance ${post_gas_balance}`);
+
 
   // Prepare batch
   // ===============================
@@ -155,7 +160,7 @@ async function runTest() {
   const methodName = ethers.utils.formatBytes32String("logicCall");
 
   let logicCallArgs = {
-    transferAmounts: [lp_balance_to_send.mul(numTxs)], // transferAmounts
+    transferAmounts: [lp_balance_to_send *(numTxs)], // transferAmounts
     transferTokenContracts: [usdc_eth_lp.address], // transferTokenContracts
     feeAmounts: [numTxs], // feeAmounts
     feeTokenContracts: [usdc_eth_lp.address], // feeTokenContracts
@@ -223,11 +228,11 @@ async function runTest() {
 
   console.log(`Ending LP eth balance ${ending_lp_eth_balance}`);
 
-  let balance_difference = ending_lp_eth_balance.sub(starting_lp_eth_balance);
+  let balance_difference = ending_lp_eth_balance.sub(post_gas_balance);
 
   console.log(`Ending LP eth balance difference ${balance_difference}`);
 
-  let exepect_gains = eth_per_lp_unit.mul(lp_balance_to_send.mul(10));
+  let exepect_gains = eth_per_lp_unit.mul(lp_balance_to_send *10);
 
   console.log(`Expected LP eth balance difference ${exepect_gains}`);
 
