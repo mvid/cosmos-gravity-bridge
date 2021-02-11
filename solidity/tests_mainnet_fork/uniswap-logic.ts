@@ -251,11 +251,14 @@ async function runTest() {
 
   console.log(`Logic Contract Balance ${logic_contract_balance_end}`);
 
+
+  expect(logic_contract_balance_end.toNumber()).to.equal(0)
+
+  expect(balance_difference.sub(exepect_gains).toNumber()).to.be.greaterThan(0);
+
   // expect(await )
 
-  // expect(
-  //     (await testERC20.functions.balanceOf(await signers[20].getAddress()))[0].toNumber()
-  // ).to.equal(40);
+
 
   // expect(
   //   (await testERC20.functions.balanceOf(peggy.address))[0].toNumber()
