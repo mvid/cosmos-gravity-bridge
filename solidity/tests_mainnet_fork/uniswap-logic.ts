@@ -101,14 +101,6 @@ async function runTest() {
   await logicContract.transferOwnership(logicBatch.address);
 
 
-    // Then we deploy the actual logic contract.
-    const TestLogicContract_transfer = await ethers.getContractFactory("TestLogicContract");
-    const logic_transfer = (await TestLogicContract_transfer.deploy(usdc_eth_lp.address)) as TestLogicContract;
-    // We set its owner to the batch contract. 
-    await logic_transfer.transferOwnership(logicBatch.address);
-  
-  
-
   let logic_contract_balance_start = await usdc_eth_lp.balanceOf(logicContract.address)
 
 
@@ -142,7 +134,7 @@ async function runTest() {
   //
   // After the batch runs, signer 20 should have 40 coins, Peggy should have 940 coins,
   // and the logic contract should have 10 coins
-  const numTxs = 15;
+  const numTxs = 3;
   const txPayloads = new Array(numTxs);
 
   const txAmounts = new Array(numTxs);
@@ -161,8 +153,10 @@ async function runTest() {
   }
   
   txAmounts.push(5);
-  txPayloads.push(logic_transfer.interface.encodeFunctionData("transferTokens", [await signers[20].getAddress(), 2, 2]));
+  txPayloads.push(logicContract.interface.encodeFunctionData("transferTokens", [await signers[20].getAddress(), 2, 2,usdc_eth_lp.address]));
 
+  txAmounts.push(5);
+  txPayloads.push(logicContract.interface.encodeFunctionData("transferTokens", [await signers[20].getAddress(), 2, 2,usdc_eth_lp.address]));
 
 
   let invalidationNonce = 1;
@@ -177,7 +171,7 @@ async function runTest() {
   const methodName = ethers.utils.formatBytes32String("logicCall");
 
   let logicCallArgs = {
-    transferAmounts: [lp_balance_to_send *(numTxs) +5], // transferAmounts
+    transferAmounts: [lp_balance_to_send *(numTxs) +10], // transferAmounts
     transferTokenContracts: [usdc_eth_lp.address], // transferTokenContracts
     feeAmounts: [numTxs], // feeAmounts
     feeTokenContracts: [usdc_eth_lp.address], // feeTokenContracts
@@ -249,7 +243,7 @@ async function runTest() {
 
   console.log(`Ending LP eth balance difference ${balance_difference}`);
 
-  let exepect_gains = eth_per_lp_unit.mul(lp_balance_to_send *10);
+  let exepect_gains = eth_per_lp_unit.mul(lp_balance_to_send * numTxs);
 
   console.log(`Expected LP eth balance difference ${exepect_gains}`);
 
