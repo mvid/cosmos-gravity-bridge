@@ -153,10 +153,10 @@ async function runTest() {
   }
   
   txAmounts.push(5);
-  txPayloads.push(logicContract.interface.encodeFunctionData("transferTokens", [await signers[20].getAddress(), 2, 2,usdc_eth_lp.address]));
+  txPayloads.push(logicContract.interface.encodeFunctionData("transferTokens", [await signers[20].getAddress(), 2, 3,usdc_eth_lp.address]));
 
   txAmounts.push(5);
-  txPayloads.push(logicContract.interface.encodeFunctionData("transferTokens", [await signers[20].getAddress(), 2, 2,usdc_eth_lp.address]));
+  txPayloads.push(logicContract.interface.encodeFunctionData("transferTokens", [await signers[20].getAddress(), 3, 2,usdc_eth_lp.address]));
 
 
   let invalidationNonce = 1;
