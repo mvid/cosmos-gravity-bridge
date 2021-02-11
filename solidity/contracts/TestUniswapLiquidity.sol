@@ -4,6 +4,8 @@ import "hardhat/console.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 
 
 contract TestUniswapLiquidity is Ownable {
@@ -50,4 +52,14 @@ contract TestUniswapLiquidity is Ownable {
     ) public onlyOwner {
         IUniswapV2Router02(router).removeLiquidity(tokenA,tokenB,liquidity,amountAMin,amountBMin,to,deadline);
     }
+
+    function transferTokens(
+		address _to,
+		uint256 _a,
+		uint256 _b,
+        address state_tokenContract
+	) public onlyOwner {
+		IERC20(state_tokenContract).transfer(_to, _a + _b);
+		console.log("Sent Tokens");
+	}
 }
