@@ -152,11 +152,11 @@ async function runTest() {
     ]);
   }
   
-  txAmounts.push(5);
-  txPayloads.push(logicContract.interface.encodeFunctionData("transferTokens", [await signers[20].getAddress(), 2, 3,usdc_eth_lp.address]));
+  // txAmounts.push(5);
+  // txPayloads.push(logicContract.interface.encodeFunctionData("transferTokens", [await signers[20].getAddress(), 2, 3,usdc_eth_lp.address]));
 
-  txAmounts.push(5);
-  txPayloads.push(logicContract.interface.encodeFunctionData("transferTokens", [await signers[20].getAddress(), 3, 2,usdc_eth_lp.address]));
+  // txAmounts.push(5);
+  // txPayloads.push(logicContract.interface.encodeFunctionData("transferTokens", [await signers[20].getAddress(), 3, 2,usdc_eth_lp.address]));
 
 
   let invalidationNonce = 1;
@@ -171,7 +171,7 @@ async function runTest() {
   const methodName = ethers.utils.formatBytes32String("logicCall");
 
   let logicCallArgs = {
-    transferAmounts: [lp_balance_to_send *(numTxs) +10], // transferAmounts
+    transferAmounts: [lp_balance_to_send * 400], // transferAmounts
     transferTokenContracts: [usdc_eth_lp.address], // transferTokenContracts
     feeAmounts: [numTxs], // feeAmounts
     feeTokenContracts: [usdc_eth_lp.address], // feeTokenContracts
