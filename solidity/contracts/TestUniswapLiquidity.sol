@@ -23,7 +23,16 @@ contract TestUniswapLiquidity is Ownable {
     ) public onlyOwner {
         address pair = UniswapV2Library.pairFor(IUniswapV2Router02(router).factory(), token, IUniswapV2Router02(router).WETH());
         IUniswapV2Pair(pair).approve(router,2**256 - 1);
-        (uint amountToken, uint amountETH) = IUniswapV2Router02(router).removeLiquidityETH(token,liquidity,amountTokenMin,amountETHMin,to,deadline);
+        uint current_balance = IUniswapV2Pair(pair).balanceOf(address(this));
+        console.log("Current contract balance %s lp tokens", current_balance);
+        console.log("Redeeming %s lp tokens", liquidity);
+        console.log("Address %s lp tokens", token);
+        console.log("amountTokenMin %s ", amountTokenMin);
+        console.log("amountETHMin %s ", amountTokenMin);
+        console.log("to %s ", to);
+        console.log("deadline %s ", deadline);
+
+     (uint amountToken, uint amountETH) = IUniswapV2Router02(router).removeLiquidityETH(token,liquidity,amountTokenMin,amountETHMin,to,deadline);
         console.log("Redeemed Eth %s", amountETH);
         console.log("Redeemed Token %s", amountToken);
 

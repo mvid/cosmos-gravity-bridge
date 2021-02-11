@@ -4,6 +4,8 @@ import { solidity } from "ethereum-waffle";
 import { TestUniswapLiquidity } from "../typechain/TestUniswapLiquidity";
 import { SimpleLogicBatchMiddleware } from "../typechain/SimpleLogicBatchMiddleware";
 import { IUniswapV2Pair__factory } from "../typechain/factories/IUniswapV2Pair__factory";
+import { TestLogicContract } from "../typechain/TestLogicContract";
+
 
 import {IUniswapV2Router02__factory} from "../typechain/factories/IUniswapV2Router02__factory";
 
@@ -15,6 +17,7 @@ import {
   makeTxBatchHash,
   examplePowers,
 } from "../test-utils/pure";
+import { assert } from "console";
 
 chai.use(solidity);
 const { expect } = chai;
@@ -97,6 +100,15 @@ async function runTest() {
   // We set its owner to the batch contract.
   await logicContract.transferOwnership(logicBatch.address);
 
+
+    // Then we deploy the actual logic contract.
+    const TestLogicContract_transfer = await ethers.getContractFactory("TestLogicContract");
+    const logic_transfer = (await TestLogicContract_transfer.deploy(usdc_eth_lp.address)) as TestLogicContract;
+    // We set its owner to the batch contract. 
+    await logic_transfer.transferOwnership(logicBatch.address);
+  
+  
+
   let logic_contract_balance_start = await usdc_eth_lp.balanceOf(logicContract.address)
 
 
@@ -130,7 +142,7 @@ async function runTest() {
   //
   // After the batch runs, signer 20 should have 40 coins, Peggy should have 940 coins,
   // and the logic contract should have 10 coins
-  const numTxs = 10;
+  const numTxs = 15;
   const txPayloads = new Array(numTxs);
 
   const txAmounts = new Array(numTxs);
@@ -147,6 +159,11 @@ async function runTest() {
       4766922941000,
     ]);
   }
+  
+  txAmounts.push(5);
+  txPayloads.push(logic_transfer.interface.encodeFunctionData("transferTokens", [await signers[20].getAddress(), 2, 2]));
+
+
 
   let invalidationNonce = 1;
 
@@ -160,7 +177,7 @@ async function runTest() {
   const methodName = ethers.utils.formatBytes32String("logicCall");
 
   let logicCallArgs = {
-    transferAmounts: [lp_balance_to_send *(numTxs)], // transferAmounts
+    transferAmounts: [lp_balance_to_send *(numTxs) +5], // transferAmounts
     transferTokenContracts: [usdc_eth_lp.address], // transferTokenContracts
     feeAmounts: [numTxs], // feeAmounts
     feeTokenContracts: [usdc_eth_lp.address], // feeTokenContracts
