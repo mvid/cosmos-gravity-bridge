@@ -256,21 +256,6 @@ async function runTest() {
 
   expect(balance_difference.sub(exepect_gains).toNumber()).to.be.greaterThan(0);
 
-  // expect(await )
-
-
-
-  // expect(
-  //   (await testERC20.functions.balanceOf(peggy.address))[0].toNumber()
-  // ).to.equal(940);
-
-  // expect(
-  //     (await testERC20.functions.balanceOf(logicContract.address))[0].toNumber()
-  // ).to.equal(10);
-
-  // expect(
-  //   (await testERC20.functions.balanceOf(await signers[0].getAddress()))[0].toNumber()
-  // ).to.equal(9010);
 }
 
 describe("uniswap logic happy path tests", function () {

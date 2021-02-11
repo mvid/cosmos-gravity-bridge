@@ -16,13 +16,15 @@ use contact::client::Contact;
 use cosmos_peggy::utils::wait_for_cosmos_online;
 use deep_space::coin::Coin;
 use happy_path::happy_path_test;
+use happy_path_v2::happy_path_test_v2;
 use peggy_proto::peggy::query_client::QueryClient as PeggyQueryClient;
-use std::time::Duration;
+use std::{env, time::Duration};
 use transaction_stress_test::transaction_stress_test;
 use valset_stress::validator_set_stress_test;
 
 mod bootstrapping;
 mod happy_path;
+mod happy_path_v2;
 mod transaction_stress_test;
 mod utils;
 mod valset_stress;
@@ -74,20 +76,28 @@ pub fn one_eth() -> Uint256 {
     1000000000000000000u128.into()
 }
 
+pub fn should_deploy_contracts() -> bool {
+    match env::var("DEPLOY_CONTRACTS") {
+        Ok(s) => s == "1" || s.to_lowercase() == "yes" || s.to_lowercase() == "true",
+        _ => false,
+    }
+}
+
 #[actix_rt::main]
 pub async fn main() {
     env_logger::init();
     info!("Staring Peggy test-runner");
     let contact = Contact::new(COSMOS_NODE, OPERATION_TIMEOUT);
-    let grpc_client = PeggyQueryClient::connect(COSMOS_NODE_GRPC).await.unwrap();
-    let web30 = web30::client::Web3::new(ETH_NODE, OPERATION_TIMEOUT);
-    let keys = get_keys();
 
     info!("Waiting for Cosmos chain to come online");
     wait_for_cosmos_online(&contact, TOTAL_TIMEOUT).await;
 
+    let grpc_client = PeggyQueryClient::connect(COSMOS_NODE_GRPC).await.unwrap();
+    let web30 = web30::client::Web3::new(ETH_NODE, OPERATION_TIMEOUT);
+    let keys = get_keys();
+
     // if we detect this env var we are only deploying contracts, do that then exit.
-    if option_env!("DEPLOY_CONTRACTS").is_some() {
+    if should_deploy_contracts() {
         info!("test-runner in contract deploying mode, deploying contracts, then exiting");
         deploy_contracts(&contact, &keys, get_fee()).await;
         return;
@@ -139,6 +149,10 @@ pub async fn main() {
         } else if test_type == "VALSET_STRESS" {
             info!("Starting Valset update stress test");
             validator_set_stress_test(&web30, &contact, keys, peggy_address).await;
+            return;
+        } else if test_type == "V2_HAPPY_PATH" {
+            info!("Starting happy path for Gravity v2");
+            happy_path_test_v2(&web30, grpc_client, &contact, keys, peggy_address, false).await;
             return;
         }
     }

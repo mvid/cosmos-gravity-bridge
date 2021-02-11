@@ -137,11 +137,15 @@ func (k msgServer) SendToEth(c context.Context, msg *types.MsgSendToEth) (*types
 // RequestBatch handles MsgRequestBatch
 func (k msgServer) RequestBatch(c context.Context, msg *types.MsgRequestBatch) (*types.MsgRequestBatchResponse, error) {
 	ctx := sdk.UnwrapSDKContext(c)
-	ec, err := types.ERC20FromPeggyCoin(sdk.NewInt64Coin(msg.Denom, 0))
+
+	// Check if the denom is a peggy coin, if not, check if there is a deployed ERC20 representing it.
+	// If not, error out
+	_, tokenContract, err := k.DenomToERC20(ctx, msg.Denom)
 	if err != nil {
 		return nil, err
 	}
-	batchID, err := k.BuildOutgoingTXBatch(ctx, ec.Contract, OutgoingTxBatchSize)
+
+	batchID, err := k.BuildOutgoingTXBatch(ctx, tokenContract, OutgoingTxBatchSize)
 	if err != nil {
 		return nil, err
 	}
@@ -320,4 +324,48 @@ func (k msgServer) WithdrawClaim(c context.Context, msg *types.MsgWithdrawClaim)
 	)
 
 	return &types.MsgWithdrawClaimResponse{}, nil
+}
+
+// ERC20Deployed handles MsgERC20Deployed
+func (k msgServer) ERC20DeployedClaim(c context.Context, msg *types.MsgERC20DeployedClaim) (*types.MsgERC20DeployedClaimResponse, error) {
+	ctx := sdk.UnwrapSDKContext(c)
+
+	orch, _ := sdk.AccAddressFromBech32(msg.Orchestrator)
+	validator := k.GetOrchestratorValidator(ctx, orch)
+	if validator == nil {
+		sval := k.StakingKeeper.Validator(ctx, sdk.ValAddress(orch))
+		if sval == nil {
+			return nil, sdkerrors.Wrap(types.ErrUnknown, "validator")
+		}
+		validator = sval.GetOperator()
+	}
+
+	// return an error if the validator isn't in the active set
+	val := k.StakingKeeper.Validator(ctx, validator)
+	if val == nil || !val.IsBonded() {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrorInvalidSigner, "validator not in acitve set")
+	}
+
+	any, err := codectypes.NewAnyWithValue(msg)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add the claim to the store
+	_, err = k.Attest(ctx, msg, any)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "create attestation")
+	}
+
+	// Emit the handle message event
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent(
+			sdk.EventTypeMessage,
+			sdk.NewAttribute(sdk.AttributeKeyModule, msg.Type()),
+			// TODO: maybe return something better here? is this the right string representation?
+			sdk.NewAttribute(types.AttributeKeyAttestationID, string(types.GetAttestationKey(msg.EventNonce, msg.ClaimHash()))),
+		),
+	)
+
+	return &types.MsgERC20DeployedClaimResponse{}, nil
 }

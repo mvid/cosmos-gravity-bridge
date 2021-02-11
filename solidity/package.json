@@ -6,9 +6,10 @@
   "scripts": {
     "evm": "npx hardhat node",
     "test": "npx hardhat test --network localhost",
-    "evm_fork":"npx hardhat node --fork https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_ID} --fork-block-number 11780000",
-    "test_fork": "npx hardhat test --network localhost ./tests_mainnet_fork/*.ts",
-    "typechain": "npx hardhat typechain"
+    "typechain": "npx hardhat typechain",
+    "compile-deployer": "npx tsc -p . ; pkg dist/contract-deployer.js --targets node10-linux-x64",
+    "evm_fork": "npx hardhat node --fork https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_ID} --fork-block-number 11780000",
+    "test_fork": "npx hardhat test --network localhost ./tests_mainnet_fork/*.ts"
   },
   "author": "",
   "license": "None",
@@ -56,5 +57,8 @@
     "typechain": "^4.0.1",
     "typescript": "^3.9.7",
     "axios": "0.21.1"
+  },
+  "dependencies": {
+    "pkg": "^4.4.9"
   }
 }

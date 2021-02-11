@@ -6,8 +6,8 @@ use cosmos_peggy::utils::wait_for_next_cosmos_block;
 use deep_space::coin::Coin;
 use deep_space::private_key::PrivateKey as CosmosPrivateKey;
 use futures::future::join_all;
-use std::fs::File;
 use std::process::Command;
+use std::{fs::File, path::Path};
 use std::{
     io::{BufRead, BufReader, Read, Write},
     process::ExitStatus,
@@ -106,20 +106,50 @@ pub async fn deploy_contracts(
     // yet produced the next block after submitting each eth address
     wait_for_next_cosmos_block(contact, TOTAL_TIMEOUT).await;
 
-    // wait for the orchestrators to finish registering their eth addresses
-    let output = Command::new("npx")
-        .args(&[
-            "ts-node",
-            "/peggy/solidity/contract-deployer.ts",
-            &format!("--cosmos-node={}", COSMOS_NODE_ABCI),
-            &format!("--eth-node={}", ETH_NODE),
-            &format!("--eth-privkey={:#x}", *MINER_PRIVATE_KEY),
-            "--contract=/peggy/solidity/artifacts/contracts/Peggy.sol/Peggy.json",
-            "--test-mode=true",
-        ])
-        .current_dir("/peggy/solidity/")
-        .output()
-        .expect("Failed to deploy contracts!");
+    // these are the possible paths where we could find the contract deployer
+    // and the peggy contract itself, feel free to expand this if it makes your
+    // deployments more straightforward.
+
+    // both files are just in the PWD
+    const A: [&str; 2] = ["contract-deployer", "Peggy.json"];
+    // files are placed in a root /solidity/ folder
+    const B: [&str; 2] = ["/solidity/contract-deployer", "/solidity/Peggy.json"];
+    // the default unmoved locations for the Gravity repo
+    const C: [&str; 3] = [
+        "/peggy/solidity/contract-deployer.ts",
+        "/peggy/solidity/artifacts/contracts/Peggy.sol/Peggy.json",
+        "/peggy/solidity/",
+    ];
+    let output = if all_paths_exist(&A) || all_paths_exist(&B) {
+        let paths = return_existing(A, B);
+        Command::new(paths[0])
+            .args(&[
+                &format!("--cosmos-node={}", COSMOS_NODE_ABCI),
+                &format!("--eth-node={}", ETH_NODE),
+                &format!("--eth-privkey={:#x}", *MINER_PRIVATE_KEY),
+                &format!("--contract={}", paths[1]),
+                "--test-mode=true",
+            ])
+            .output()
+            .expect("Failed to deploy contracts!")
+    } else if all_paths_exist(&C) {
+        Command::new("npx")
+            .args(&[
+                "ts-node",
+                C[0],
+                &format!("--cosmos-node={}", COSMOS_NODE_ABCI),
+                &format!("--eth-node={}", ETH_NODE),
+                &format!("--eth-privkey={:#x}", *MINER_PRIVATE_KEY),
+                &format!("--contract={}", C[1]),
+                "--test-mode=true",
+            ])
+            .current_dir(C[2])
+            .output()
+            .expect("Failed to deploy contracts!")
+    } else {
+        panic!("Could not find Peggy.json contract artifact in any known location!")
+    };
+
     info!("stdout: {}", String::from_utf8_lossy(&output.stdout));
     info!("stderr: {}", String::from_utf8_lossy(&output.stderr));
     if !ExitStatus::success(&output.status) {
@@ -156,5 +186,24 @@ pub fn parse_contract_addresses() -> BootstrapContractAddresses {
     BootstrapContractAddresses {
         peggy_contract: peggy_address,
         erc20_addresses,
+    }
+}
+
+fn all_paths_exist(input: &[&str]) -> bool {
+    for i in input {
+        if !Path::new(i).exists() {
+            return false;
+        }
+    }
+    true
+}
+
+fn return_existing<'a>(a: [&'a str; 2], b: [&'a str; 2]) -> [&'a str; 2] {
+    if all_paths_exist(&a) {
+        a
+    } else if all_paths_exist(&b) {
+        b
+    } else {
+        panic!("No paths exist!")
     }
 }

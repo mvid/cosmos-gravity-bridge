@@ -22,6 +22,8 @@
     "tests_mainnet_fork/**/*",
     "typechain/**/*",
     "types/**/*",
-    "hardhat.config.ts"
-, "tests_mainnet_fork/uniswap-logic.ts"  ]
+    "hardhat.config.ts",
+    "contract-deployer.ts",
+    "tests_mainnet_fork/uniswap-logic.ts"
+  ]
 }
