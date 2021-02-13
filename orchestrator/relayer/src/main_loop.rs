@@ -1,5 +1,5 @@
 use crate::{batch_relaying::relay_batches, valset_relaying::relay_valsets};
-use clarity::address::Address as EthAddress;
+use clarity::Address as EthAddress;
 use clarity::PrivateKey as EthPrivateKey;
 use peggy_proto::peggy::query_client::QueryClient as PeggyQueryClient;
 use std::time::{Duration, Instant};
@@ -16,6 +16,7 @@ pub async fn relayer_main_loop(
     web3: Web3,
     grpc_client: PeggyQueryClient<Channel>,
     peggy_contract_address: EthAddress,
+    gas_price_multiplier: f64,
 ) {
     let mut grpc_client = grpc_client;
     loop {
@@ -35,6 +36,7 @@ pub async fn relayer_main_loop(
             &mut grpc_client,
             peggy_contract_address,
             LOOP_SPEED,
+            gas_price_multiplier,
         )
         .await;
 

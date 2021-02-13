@@ -39,6 +39,7 @@ pub async fn orchestrator_main_loop(
     grpc_client: PeggyQueryClient<Channel>,
     peggy_contract_address: EthAddress,
     pay_fees_in: String,
+    gas_price_multiplier: f64,
 ) {
     let fee = Coin {
         denom: pay_fees_in.clone(),
@@ -67,6 +68,7 @@ pub async fn orchestrator_main_loop(
         web3,
         grpc_client.clone(),
         peggy_contract_address,
+        gas_price_multiplier,
     );
     join3(a, b, c).await;
 }

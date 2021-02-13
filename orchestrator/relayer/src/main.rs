@@ -26,6 +26,7 @@ struct Args {
     flag_cosmos_grpc: String,
     flag_ethereum_rpc: String,
     flag_contract_address: String,
+    flag_gas_price_multiplier: Option<String>,
 }
 
 lazy_static! {
@@ -38,6 +39,7 @@ lazy_static! {
             --cosmos-grpc=<gurl>         The Cosmos gRPC url
             --ethereum-rpc=<eurl>        The Ethereum RPC url, Geth light clients work and sync fast
             --contract-address=<addr>    The Ethereum contract address for Peggy
+            --gas-price-multiplier=<number> (Optional) A number to multiply 
         About:
             The Peggy relayer component, responsible for relaying data from the Cosmos blockchain
             to the Ethereum blockchain.
@@ -84,5 +86,26 @@ async fn main() {
     info!("Starting Peggy Relayer");
     info!("Ethereum Address: {}", public_eth_key);
 
-    relayer_main_loop(ethereum_key, web3, grpc_client, peggy_contract_address).await
+    let gas_price_multiplier: f64 = if let Some(mult) = args.flag_gas_price_multiplier {
+        let mult: f64 = mult
+            .parse()
+            .expect("Gas price multiplier cannot be parsed as number!");
+
+        if !mult.is_normal() || mult < 0.0 {
+            panic!("Gas price multiplier cannot be parsed as normal, positive number!");
+        }
+
+        mult
+    } else {
+        1.0
+    };
+
+    relayer_main_loop(
+        ethereum_key,
+        web3,
+        grpc_client,
+        peggy_contract_address,
+        gas_price_multiplier,
+    )
+    .await
 }

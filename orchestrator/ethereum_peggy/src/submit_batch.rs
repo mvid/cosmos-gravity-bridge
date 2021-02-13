@@ -1,6 +1,7 @@
 use crate::utils::{get_tx_batch_nonce, GasCost};
 use clarity::PrivateKey as EthPrivateKey;
 use clarity::{Address as EthAddress, Uint256};
+use num::{BigInt, BigRational};
 use peggy_utils::error::PeggyError;
 use peggy_utils::types::*;
 use std::{cmp::min, time::Duration};
@@ -89,12 +90,27 @@ pub async fn estimate_tx_batch_cost(
     web3: &Web3,
     peggy_contract_address: EthAddress,
     our_eth_key: EthPrivateKey,
+    gas_price_multiplier: f64,
 ) -> Result<GasCost, PeggyError> {
     let our_eth_address = our_eth_key.to_public_key().unwrap();
     let our_balance = web3.eth_get_balance(our_eth_address).await?;
     let our_nonce = web3.eth_get_transaction_count(our_eth_address).await?;
     let gas_limit = min((u64::MAX - 1).into(), our_balance.clone());
     let gas_price = web3.eth_gas_price().await?;
+
+    // Multiply by gas price multiplier, using rational number (fraction)
+
+    let gas_price_multiplier = match BigRational::from_float(gas_price_multiplier) {
+        Some(rat) => rat,
+        // This only happens if it is Infinity
+        None => panic!("Gas price multiplier cannot be parsed as rational number!"),
+    };
+    let gas_price = Uint256(
+        BigInt::to_biguint(&BigRational::to_integer(
+            &(BigRational::from_integer(gas_price.0.into()) * gas_price_multiplier),
+        ))
+        .unwrap(),
+    );
     let zero: Uint256 = 0u8.into();
     let val = web3
         .eth_estimate_gas(TransactionRequest {

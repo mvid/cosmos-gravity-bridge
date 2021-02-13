@@ -2,7 +2,7 @@
 //! the state of both chains and perform the required operations.
 
 use crate::find_latest_valset::find_latest_valset;
-use clarity::address::Address as EthAddress;
+use clarity::Address as EthAddress;
 use clarity::PrivateKey as EthPrivateKey;
 use cosmos_peggy::query::get_latest_transaction_batches;
 use cosmos_peggy::query::get_transaction_batch_signatures;
@@ -22,6 +22,7 @@ pub async fn relay_batches(
     mut grpc_client: &mut PeggyQueryClient<Channel>,
     peggy_contract_address: EthAddress,
     timeout: Duration,
+    gas_price_multiplier: f64,
 ) {
     let our_ethereum_address = ethereum_key.to_public_key().unwrap();
 
@@ -88,6 +89,7 @@ pub async fn relay_batches(
                 web3,
                 peggy_contract_address,
                 ethereum_key,
+                gas_price_multiplier,
             )
             .await;
             if cost.is_err() {

@@ -40,6 +40,7 @@ struct Args {
     flag_ethereum_rpc: String,
     flag_contract_address: String,
     flag_fees: String,
+    flag_gas_price_multiplier: Option<String>,
 }
 
 lazy_static! {
@@ -114,6 +115,20 @@ async fn main() {
         public_eth_key, public_cosmos_key
     );
 
+    let gas_price_multiplier: f64 = if let Some(mult) = args.flag_gas_price_multiplier {
+        let mult: f64 = mult
+            .parse()
+            .expect("Gas price multiplier cannot be parsed as number!");
+
+        if !mult.is_normal() || mult < 0.0 {
+            panic!("Gas price multiplier cannot be parsed as normal, positive number!");
+        }
+
+        mult
+    } else {
+        1.0
+    };
+
     orchestrator_main_loop(
         cosmos_key,
         ethereum_key,
@@ -122,6 +137,7 @@ async fn main() {
         grpc_client,
         contract_address,
         fee_denom,
+        gas_price_multiplier,
     )
     .await;
 }
