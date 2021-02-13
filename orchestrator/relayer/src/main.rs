@@ -30,7 +30,7 @@ struct Args {
 
 lazy_static! {
     pub static ref USAGE: String = format!(
-    "Usage: {} --ethereum-key=<key> --cosmos-legacy-rpc=<url> --cosmos-grpc=<url> --ethereum-rpc=<url> --fees=<denom> --contract-address=<addr>
+    "Usage: {} --ethereum-key=<key> --cosmos-legacy-rpc=<url> --cosmos-grpc=<url> --ethereum-rpc=<url> --contract-address=<addr>
         Options:
             -h --help                    Show this screen.
             --ethereum-key=<ekey>        An Ethereum private key containing non-trivial funds
@@ -40,8 +40,7 @@ lazy_static! {
             --contract-address=<addr>    The Ethereum contract address for Peggy
         About:
             The Peggy relayer component, responsible for relaying data from the Cosmos blockchain
-            to the Ethereum blockchain, cosmos key and fees are optional since they are only used
-            to request the creation of batches or validator sets to relay.
+            to the Ethereum blockchain.
             for Althea-Peggy.
             Written By: {}
             Version {}",
