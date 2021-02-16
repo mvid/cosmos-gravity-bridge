@@ -38,7 +38,7 @@ func InitGenesis(ctx sdk.Context, k Keeper, data types.GenesisState) {
 		}
 
 		// TODO: block height?
-		k.SetAttestationUnsafe(ctx, claim.GetEventNonce(), claim.ClaimHash(), &att)
+		k.SetAttestation(ctx, claim.GetEventNonce(), claim.ClaimHash(), &att)
 	}
 }
 
