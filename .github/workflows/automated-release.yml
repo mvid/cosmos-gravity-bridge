@@ -26,7 +26,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      # build the code before creating the release, GO first for faster failures
+      # build the code before creating the release, GO and Solidity first for faster failures
       - name: Build GO
         run: |
           cd module
@@ -35,6 +35,12 @@ jobs:
       - name: Set ENV var for GOPATH
         run: |
           echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+
+      - name: Build Solidity artifacts
+        run: cd solidity && npm ci && npm run typechain
+
+      - name: Build contract deployment script into a static binary
+        run: cd solidity && npm ci && npm run compile-deployer
 
       - name: Build Rust x86_64
         run: |
@@ -85,15 +91,15 @@ jobs:
           asset_path: ./orchestrator/target/x86_64-unknown-linux-musl/release/relayer
           asset_name: relayer
           asset_content_type: application/bin
-      - name: Upload Rust register-peggy-delegate-keys
+      - name: Upload Rust register-delegate-keys
         id: upload-rust-release-key-delegator
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./orchestrator/target/x86_64-unknown-linux-musl/release/register-peggy-delegate-keys
-          asset_name: register-peggy-delegate-keys
+          asset_path: ./orchestrator/target/x86_64-unknown-linux-musl/release/register-delegate-keys
+          asset_name: register-delegate-keys
           asset_content_type: application/bin
       - name: Upload Rust test runner
         id: upload-rust-test-runner
@@ -121,12 +127,6 @@ jobs:
       # already be deployed on Ethereum and this won't be very useful, but as any chain leads up
       # to launch it's nice to have a version history for the contract itself and see what if any
       # changes are made that may go unnoticed due to tooling
-      - name: Build Solidity artifacts
-        run: cd solidity && npm ci && npm run typechain
-
-      - name: Tar artifacts folder
-        run: cd solidity && tar -czvf solidity-artifacts.tar.gz artifacts/
-
       - name: Upload Gravity Ethereum artifacts
         id: upload-solidity-artifacts
         uses: actions/upload-release-asset@v1
@@ -138,6 +138,37 @@ jobs:
           asset_name: Peggy.json
           asset_content_type: application/bin
 
+      - name: Upload Gravity Ethereum test artifact A
+        id: upload-solidity-test-a
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: solidity/artifacts/contracts/TestERC20A.sol/TestERC20A.json
+          asset_name: TestERC20A.json
+          asset_content_type: application/bin
+      - name: Upload Gravity Ethereum test artifact B
+        id: upload-solidity-test-b
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: solidity/artifacts/contracts/TestERC20B.sol/TestERC20B.json
+          asset_name: TestERC20B.json
+          asset_content_type: application/bin
+      - name: Upload Gravity Ethereum test artifact C
+        id: upload-solidity-test-c
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: solidity/artifacts/contracts/TestERC20C.sol/TestERC20C.json
+          asset_name: TestERC20C.json
+          asset_content_type: application/bin
+
       - name: Upload contract deployer
         id: upload-contract-deployer
         uses: actions/upload-release-asset@v1
@@ -145,8 +176,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: solidity/contract-deployer.ts
-          asset_name: contract-deployer.ts
+          asset_path: solidity/contract-deployer
+          asset_name: contract-deployer
           asset_content_type: application/bin
 
       # finally we start arm builds and uploads, we do this because the release
@@ -193,15 +224,15 @@ jobs:
           asset_path: ./orchestrator/target/aarch64-unknown-linux-musl/release/relayer
           asset_name: relayer-arm
           asset_content_type: application/bin
-      - name: Upload Rust register-peggy-delegate-keys ARM
+      - name: Upload Rust register-delegate-keys ARM
         id: upload-rust-release-key-delegator-arm
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./orchestrator/target/aarch64-unknown-linux-musl/release/register-peggy-delegate-keys
-          asset_name: register-peggy-delegate-keys-arm
+          asset_path: ./orchestrator/target/aarch64-unknown-linux-musl/release/register-delegate-keys
+          asset_name: register-delegate-keys-arm
           asset_content_type: application/bin
 
       - name: Upload Go Release Asset ARM

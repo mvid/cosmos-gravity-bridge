@@ -21,11 +21,28 @@ use deep_space::address::Address as CosmosAddress;
 use deep_space::{coin::Coin, private_key::PrivateKey as CosmosPrivateKey};
 use docopt::Docopt;
 use ethereum_peggy::send_to_cosmos::send_to_cosmos;
-use std::time::Duration;
+use std::{time::Duration, u128};
 use url::Url;
 use web30::client::Web3;
 
 const TIMEOUT: Duration = Duration::from_secs(60);
+
+pub fn one_eth() -> f64 {
+    1000000000000000000f64
+}
+
+/// TODO revisit this for higher precision while
+/// still representing the number to the user as a float
+pub fn fraction_eth_to_wei(num: f64) -> Uint256 {
+    let mut res = num;
+    // in order to avoid floating point rounding issues we
+    // multiply only by 10 each time. this reduces the rounding
+    // errors enough to be ignored
+    for _ in 0..18 {
+        res *= 10f64
+    }
+    (res as u128).into()
+}
 
 #[derive(Debug, Deserialize)]
 struct Args {
@@ -35,10 +52,11 @@ struct Args {
     flag_ethereum_rpc: String,
     flag_contract_address: String,
     flag_fees: String,
-    flag_amount: String,
+    flag_amount: f64,
     flag_cosmos_destination: String,
     flag_erc20_address: String,
     flag_eth_destination: String,
+    flag_no_batch: bool,
     cmd_eth_to_cosmos: bool,
     cmd_cosmos_to_eth: bool,
 }
@@ -46,7 +64,7 @@ struct Args {
 lazy_static! {
     pub static ref USAGE: String = format!(
     "Usage:
-        {} cosmos-to-eth --cosmos-phrase=<key> --cosmos-rpc=<url> --fees=<denom> --erc20-address=<addr> --amount=<amount> --eth-destination=<dest>
+        {} cosmos-to-eth --cosmos-phrase=<key> --cosmos-rpc=<url> --fees=<denom> --erc20-address=<addr> --amount=<amount> --eth-destination=<dest> [--no-batch]
         {} eth-to-cosmos --ethereum-key=<key> --ethereum-rpc=<url> --contract-address=<addr> --erc20-address=<addr> --amount=<amount> --cosmos-destination=<dest>
         Options:
             -h --help                   Show this screen.
@@ -57,11 +75,12 @@ lazy_static! {
             --fees=<denom>              The Cosmos Denom in which to pay Cosmos chain fees
             --contract-address=<addr>   The Ethereum contract address for Peggy, this is temporary
             --erc20-address=<addr>      An erc20 address to send funds
-            --amount=<amount>           The amount of tokens to send
+            --amount=<amount>           The amount of tokens to send, for example 1.5DAI
             --cosmos-destination=<dest> A cosmos address to send tokens to
-            --eth-destination=<dest> A cosmos address to send tokens to
+            --eth-destination=<dest>    A cosmos address to send tokens to
+            --no-batch                  Don't request a batch when sending to Ethereum
         About:
-            Althea Peggy client software, moves tokens from Ethereum to Cosmos and back
+            Althea Gravity client software, moves tokens from Ethereum to Cosmos and back
             Written By: {}
             Version {}",
             env!("CARGO_PKG_NAME"),
@@ -81,7 +100,7 @@ async fn main() {
         .and_then(|d| d.deserialize())
         .unwrap_or_else(|e| e.exit());
 
-    let amount: Uint256 = args.flag_amount.parse().unwrap();
+    let amount = fraction_eth_to_wei(args.flag_amount);
     let erc20_address: EthAddress = args
         .flag_erc20_address
         .parse()
@@ -109,15 +128,22 @@ async fn main() {
         };
         let eth_dest: EthAddress = args.flag_eth_destination.parse().unwrap();
 
-        println!("Locking funds into the batch pool");
+        println!(
+            "Locking {} / {} into the batch pool",
+            args.flag_amount, erc20_address
+        );
         send_to_eth(cosmos_key, eth_dest, amount, bridge_fee, &contact)
             .await
             .expect("Failed to Send to ETH");
 
-        println!("Requesting a batch to push transaction along immediately");
-        send_request_batch(cosmos_key, peggy_denom, fee, &contact)
-            .await
-            .expect("Failed to request batch");
+        if !args.flag_no_batch {
+            println!("Requesting a batch to push transaction along immediately");
+            send_request_batch(cosmos_key, peggy_denom, fee, &contact)
+                .await
+                .expect("Failed to request batch");
+        } else {
+            println!("--no-batch specified, your transfer will wait until someone requests a batch for this token type")
+        }
     } else if args.cmd_eth_to_cosmos {
         let ethereum_key: EthPrivateKey = args
             .flag_ethereum_key
@@ -136,8 +162,8 @@ async fn main() {
         let ethereum_public_key = ethereum_key.to_public_key().unwrap();
 
         println!(
-            "Sending to Cosmos from {} to {} with amount {}",
-            ethereum_public_key, cosmos_dest, amount
+            "Sending {} / {} to Cosmos from {} to {}",
+            args.flag_amount, erc20_address, ethereum_public_key, cosmos_dest
         );
         // we send some erc20 tokens to the peggy contract to register a deposit
         let tx_id = send_to_cosmos(
@@ -154,4 +180,20 @@ async fn main() {
         .expect("Failed to send tokens to Cosmos");
         println!("Send to Cosmos txid: {:#066x}", tx_id);
     }
+}
+
+#[test]
+fn even_f32_rounding() {
+    let one_eth: Uint256 = 1000000000000000000u128.into();
+    let one_point_five_eth: Uint256 = 1500000000000000000u128.into();
+    let one_point_one_five_eth: Uint256 = 1150000000000000000u128.into();
+    let a_high_precision_number: Uint256 = 1150100000000000000u128.into();
+    let res = fraction_eth_to_wei(1f64);
+    assert_eq!(one_eth, res);
+    let res = fraction_eth_to_wei(1.5f64);
+    assert_eq!(one_point_five_eth, res);
+    let res = fraction_eth_to_wei(1.15f64);
+    assert_eq!(one_point_one_five_eth, res);
+    let res = fraction_eth_to_wei(1.1501f64);
+    assert_eq!(a_high_precision_number, res);
 }

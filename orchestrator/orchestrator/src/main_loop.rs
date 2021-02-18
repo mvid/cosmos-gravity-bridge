@@ -7,8 +7,8 @@ use clarity::PrivateKey as EthPrivateKey;
 use clarity::{address::Address as EthAddress, Uint256};
 use contact::client::Contact;
 use cosmos_peggy::{
-    query::{get_oldest_unsigned_transaction_batch, get_oldest_unsigned_valset},
-    send::{send_batch_confirm, send_valset_confirm},
+    query::{get_oldest_unsigned_transaction_batch, get_oldest_unsigned_valsets},
+    send::{send_batch_confirm, send_valset_confirms},
 };
 use deep_space::{coin::Coin, private_key::PrivateKey as CosmosPrivateKey};
 use ethereum_peggy::utils::get_peggy_id;
@@ -24,7 +24,8 @@ use web30::client::Web3;
 /// The execution speed governing all loops in this file
 /// which is to say all loops started by Orchestrator main
 /// loop except the relayer loop
-pub const LOOP_SPEED: Duration = Duration::from_secs(10);
+pub const ETH_SIGNER_LOOP_SPEED: Duration = Duration::from_secs(11);
+pub const ETH_ORACLE_LOOP_SPEED: Duration = Duration::from_secs(13);
 
 /// This loop combines the three major roles required to make
 /// up the 'Orchestrator', all three of these are async loops
@@ -73,7 +74,6 @@ pub async fn orchestrator_main_loop(
 
 /// This function is responsible for making sure that Ethereum events are retrieved from the Ethereum blockchain
 /// and ferried over to Cosmos where they will be used to issue tokens or process batches.
-/// TODO this loop requires a method to bootstrap back to the correct event nonce when restarted
 pub async fn eth_oracle_main_loop(
     cosmos_key: CosmosPrivateKey,
     web3: Web3,
@@ -132,8 +132,8 @@ pub async fn eth_oracle_main_loop(
         // this is not required for any specific reason. In fact we expect and plan for
         // the timing being off significantly
         let elapsed = Instant::now() - loop_start;
-        if elapsed < LOOP_SPEED {
-            delay_for(LOOP_SPEED - elapsed).await;
+        if elapsed < ETH_ORACLE_LOOP_SPEED {
+            delay_for(ETH_ORACLE_LOOP_SPEED - elapsed).await;
         }
     }
 }
@@ -176,22 +176,29 @@ pub async fn eth_signer_main_loop(
             );
         }
 
-        // sign the last unsigned valset, TODO check if we already have signed this
-        match get_oldest_unsigned_valset(&mut grpc_client, our_cosmos_address).await {
-            Ok(Some(last_unsigned_valset)) => {
-                info!("Sending valset confirm for {}", last_unsigned_valset.nonce);
-                let res = send_valset_confirm(
-                    &contact,
-                    ethereum_key,
-                    fee.clone(),
-                    last_unsigned_valset,
-                    cosmos_key,
-                    peggy_id.clone(),
-                )
-                .await;
-                trace!("Valset confirm result is {:?}", res);
+        // sign the last unsigned valsets
+        match get_oldest_unsigned_valsets(&mut grpc_client, our_cosmos_address).await {
+            Ok(valsets) => {
+                if valsets.is_empty() {
+                    trace!("No validator sets to sign, node is caught up!")
+                } else {
+                    info!(
+                        "Sending {} valset confirms starting with {}",
+                        valsets.len(),
+                        valsets[0].nonce
+                    );
+                    let res = send_valset_confirms(
+                        &contact,
+                        ethereum_key,
+                        fee.clone(),
+                        valsets,
+                        cosmos_key,
+                        peggy_id.clone(),
+                    )
+                    .await;
+                    trace!("Valset confirm result is {:?}", res);
+                }
             }
-            Ok(None) => trace!("No valset waiting to be signed!"),
             Err(e) => trace!(
                 "Failed to get unsigned valsets, check your Cosmos gRPC {:?}",
                 e
@@ -229,8 +236,8 @@ pub async fn eth_signer_main_loop(
         // this is not required for any specific reason. In fact we expect and plan for
         // the timing being off significantly
         let elapsed = Instant::now() - loop_start;
-        if elapsed < LOOP_SPEED {
-            delay_for(LOOP_SPEED - elapsed).await;
+        if elapsed < ETH_SIGNER_LOOP_SPEED {
+            delay_for(ETH_SIGNER_LOOP_SPEED - elapsed).await;
         }
     }
 }

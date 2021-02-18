@@ -12,6 +12,7 @@ use deep_space::transaction::TransactionSendType;
 use deep_space::{coin::Coin, utils::bytes_to_hex_str};
 use ethereum_peggy::message_signatures::{encode_tx_batch_confirm, encode_valset_confirm};
 use peggy_utils::types::*;
+use std::collections::HashMap;
 
 /// Send a transaction updating the eth address for the sending
 /// Cosmos address. The sending Cosmos address should be a validator
@@ -62,13 +63,14 @@ pub async fn update_peggy_delegate_addresses(
     contact.retry_on_block(tx).await
 }
 
-/// Send in a confirmation for a specific validator set for a specific block height
+/// Send in a confirmation for an array of validator sets, it's far more efficient to send these
+/// as a single message
 #[allow(clippy::too_many_arguments)]
-pub async fn send_valset_confirm(
+pub async fn send_valset_confirms(
     contact: &Contact,
     eth_private_key: EthPrivateKey,
     fee: Coin,
-    valset: Valset,
+    valsets: Vec<Valset>,
     private_key: PrivateKey,
     peggy_id: String,
 ) -> Result<TXSendResponse, JsonRpcError> {
@@ -80,28 +82,33 @@ pub async fn send_valset_confirm(
 
     let tx_info = maybe_get_optional_tx_info(our_address, None, None, None, contact).await?;
 
-    let message = encode_valset_confirm(peggy_id, valset.clone());
-    let eth_signature = eth_private_key.sign_ethereum_msg(&message);
+    let mut messages = Vec::new();
 
-    trace!(
-        "Sent valset update with address {} and sig {}",
-        our_eth_address,
-        bytes_to_hex_str(&eth_signature.to_bytes())
-    );
+    for valset in valsets {
+        let message = encode_valset_confirm(peggy_id.clone(), valset.clone());
+        let eth_signature = eth_private_key.sign_ethereum_msg(&message);
+        trace!(
+            "Sending valset update with address {} and sig {}",
+            our_eth_address,
+            bytes_to_hex_str(&eth_signature.to_bytes())
+        );
+        messages.push(PeggyMsg::ValsetConfirmMsg(ValsetConfirmMsg {
+            orchestrator: our_address,
+            eth_address: our_eth_address,
+            nonce: valset.nonce.into(),
+            eth_signature: bytes_to_hex_str(&eth_signature.to_bytes()),
+        }));
+    }
+
     let std_sign_msg = StdSignMsg {
         chain_id: tx_info.chain_id,
         account_number: tx_info.account_number,
         sequence: tx_info.sequence,
         fee: StdFee {
             amount: vec![fee],
-            gas: 500_000u64.into(),
+            gas: 500_000_000u64.into(),
         },
-        msgs: vec![PeggyMsg::ValsetConfirmMsg(ValsetConfirmMsg {
-            orchestrator: our_address,
-            eth_address: our_eth_address,
-            nonce: valset.nonce.into(),
-            eth_signature: bytes_to_hex_str(&eth_signature.to_bytes()),
-        })],
+        msgs: messages,
         memo: String::new(),
     };
 
@@ -174,23 +181,42 @@ pub async fn send_ethereum_claims(
 
     let tx_info = maybe_get_optional_tx_info(our_address, None, None, None, contact).await?;
 
-    let mut msgs = Vec::new();
+    // This sorts oracle messages by event nonce before submitting them. It's not a pretty implementation because
+    // we're missing an intermediary layer of abstraction. We could implement 'EventTrait' and then implement sort
+    // for it, but then when we go to transform 'EventTrait' objects into PeggyMsg enum values we'll have all sorts
+    // of issues extracting the inner object from the TraitObject. Likewise we could implement sort of PeggyMsg but that
+    // would require a truly horrendous (nearly 100 line) match statement to deal with all combinations. That match statement
+    // could be reduced by adding two traits to sort against but really this is the easiest option.
+    //
+    // We index the events by event nonce in an unordered hashmap and then play them back in order into a vec
+    let mut unordered_msgs = HashMap::new();
     for deposit in deposits {
-        msgs.push(PeggyMsg::DepositClaimMsg(DepositClaimMsg::from_event(
-            deposit,
-            our_address,
-        )))
+        unordered_msgs.insert(
+            deposit.event_nonce.clone(),
+            PeggyMsg::DepositClaimMsg(DepositClaimMsg::from_event(deposit, our_address)),
+        );
     }
     for withdraw in withdraws {
-        msgs.push(PeggyMsg::WithdrawClaimMsg(WithdrawClaimMsg::from_event(
-            withdraw,
-            our_address,
-        )))
+        unordered_msgs.insert(
+            withdraw.event_nonce.clone(),
+            PeggyMsg::WithdrawClaimMsg(WithdrawClaimMsg::from_event(withdraw, our_address)),
+        );
     }
     for deploy in erc20_deploys {
-        msgs.push(PeggyMsg::ERC20DeployedClaimMsg(
-            ERC20DeployedClaimMsg::from_event(deploy, our_address),
-        ))
+        unordered_msgs.insert(
+            deploy.event_nonce.clone(),
+            PeggyMsg::ERC20DeployedClaimMsg(ERC20DeployedClaimMsg::from_event(deploy, our_address)),
+        );
+    }
+    let mut keys = Vec::new();
+    for (key, _) in unordered_msgs.iter() {
+        keys.push(key);
+    }
+    keys.sort();
+
+    let mut msgs = Vec::new();
+    for i in keys {
+        msgs.push(unordered_msgs[i].clone());
     }
 
     let std_sign_msg = StdSignMsg {

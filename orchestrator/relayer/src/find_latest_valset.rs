@@ -43,8 +43,7 @@ pub async fn find_latest_valset(
                 vec![peggy_contract_address],
                 vec!["ValsetUpdatedEvent(uint256,address[],uint256[])"],
             )
-            .await
-            .unwrap();
+            .await?;
         // by default the lowest found valset goes first, we want the highest.
         all_valset_events.reverse();
 
@@ -86,6 +85,7 @@ fn check_if_valsets_differ(cosmos_valset: Option<Valset>, ethereum_valset: &Vals
         return;
     } else if cosmos_valset.is_none() {
         error!("Cosmos does not have a valset for nonce {} but that is the one on the Ethereum chain! Possible bridge highjacking!", ethereum_valset.nonce);
+        return;
     }
     let cosmos_valset = cosmos_valset.unwrap();
     if cosmos_valset != *ethereum_valset {
